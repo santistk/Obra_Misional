@@ -380,6 +380,28 @@
                 padding: 10px 12px;
             }
         }
+        
+        .save-btn {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            font-size: 1rem;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+        }
+
+        .save-btn:hover {
+            background: #45a049;
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
+        }
     </style>
 </head>
 <body>
@@ -542,6 +564,9 @@
                 <div class="actions">
                     <button type="button" class="generate-btn" onclick="generarInforme()">
                         <i class="fas fa-file-pdf"></i> Generar Informe
+                    </button>
+                    <button type="button" class="save-btn" onclick="guardarInformacion()">
+                        <i class="fas fa-save"></i> Guardar Información
                     </button>
                     <button type="button" class="clear-btn" onclick="limpiarFormulario()">
                         <i class="fas fa-trash-alt"></i> Limpiar Formulario
@@ -736,6 +761,115 @@
                     </div>
                 `;
             }
+        }
+        
+        // Guardar información en localStorage
+        function guardarInformacion() {
+            const formData = new FormData(document.getElementById('informeForm'));
+            const data = {};
+            
+            // Recopilar datos del formulario
+            for (let [key, value] of formData.entries()) {
+                if (data[key]) {
+                    // Si ya existe la clave, convertir en array
+                    if (Array.isArray(data[key])) {
+                        data[key].push(value);
+                    } else {
+                        data[key] = [data[key], value];
+                    }
+                } else {
+                    data[key] = value;
+                }
+            }
+            
+            // Guardar en localStorage
+            localStorage.setItem('informeMisional', JSON.stringify(data));
+            alert('Información guardada correctamente. Podrá continuar más tarde.');
+        }
+        
+        // Cargar información guardada al cargar la página
+        document.addEventListener('DOMContentLoaded', function() {
+            const savedData = localStorage.getItem('informeMisional');
+            if (savedData) {
+                const data = JSON.parse(savedData);
+                
+                // Cargar datos simples
+                Object.keys(data).forEach(key => {
+                    const element = document.querySelector(`[name="${key}"]`);
+                    if (element && element.type !== 'checkbox' && element.type !== 'radio') {
+                        element.value = data[key];
+                    }
+                });
+                
+                // Cargar datos de arrays (personas)
+                // Ejemplo para personas en enseñanza
+                if (data['personaNombre[]']) {
+                    const nombres = Array.isArray(data['personaNombre[]']) ? data['personaNombre[]'] : [data['personaNombre[]']];
+                    const edades = Array.isArray(data['personaEdad[]']) ? data['personaEdad[]'] : [data['personaEdad[]'] || ''];
+                    const planes = Array.isArray(data['personaPlanes[]']) ? data['personaPlanes[]'] : [data['personaPlanes[]'] || ''];
+                    
+                    // Limpiar contenedor y agregar personas guardadas
+                    const container = document.getElementById('personasEnsenanza');
+                    container.innerHTML = '';
+                    
+                    nombres.forEach((nombre, index) => {
+                        addPersonaWithValues('personasEnsenanza', nombre, edades[index] || '', planes[index] || '');
+                    });
+                }
+                
+                alert('Información guardada cargada correctamente.');
+            }
+        });
+        
+        // Función para agregar persona con valores específicos
+        function addPersonaWithValues(containerId, nombre, edad, planes) {
+            const container = document.getElementById(containerId);
+            const personaCount = container.querySelectorAll('.persona-item').length + 1;
+            
+            let titulo = '';
+            let nombreField = '';
+            let edadField = '';
+            let planesField = '';
+            
+            if (containerId === 'personasEnsenanza') {
+                titulo = `Persona/Familia #${personaCount}`;
+                nombreField = 'personaNombre[]';
+                edadField = 'personaEdad[]';
+                planesField = 'personaPlanes[]';
+            } else if (containerId === 'recienConversos') {
+                titulo = `Recién convertido #${personaCount}`;
+                nombreField = 'recienNombre[]';
+                edadField = 'recienEdad[]';
+                planesField = 'recienPlanes[]';
+            } else if (containerId === 'menosActivos') {
+                titulo = `Menos activo #${personaCount}`;
+                nombreField = 'activoNombre[]';
+                edadField = 'activoEdad[]';
+                planesField = 'activoPlanes[]';
+            }
+            
+            const personaHTML = `
+                <div class="persona-item">
+                    <div class="persona-header">
+                        <h4>${titulo}</h4>
+                        <button type="button" class="remove-btn" onclick="removePersona(this)"><i class="fas fa-times"></i></button>
+                    </div>
+                    <div class="form-group">
+                        <label>Nombre de la persona o familia</label>
+                        <input type="text" name="${nombreField}" placeholder="Ingrese nombre completo" value="${nombre}" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Edad (si aplica)</label>
+                        <input type="number" name="${edadField}" min="0" max="120" placeholder="Ingrese edad" value="${edad}">
+                    </div>
+                    <div class="form-group">
+                        <label>Planes para ayudar a la persona/familia</label>
+                        <textarea name="${planesField}" placeholder="Describa los planes de apoyo...">${planes}</textarea>
+                    </div>
+                </div>
+            `;
+            
+            container.insertAdjacentHTML('beforeend', personaHTML);
         }
         
         // Generar el informe en PDF
